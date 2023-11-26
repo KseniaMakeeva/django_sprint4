@@ -53,7 +53,7 @@ class PostDetailView(DetailView):
         if (
             not self.get_object().is_published and (
                 self.get_object().author != request.user)):
-            return redirect('blog:post_detail', pk=self.kwargs['pk'])
+            return redirect('blog:list', pk=self.kwargs['pk'])
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -87,7 +87,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('blog:profile', args=[self.request.user])
+        return reverse('blog:profile', kwargs={'username': self.request.user})
 
 
 class PostUpdateView(LoginRequiredMixin, UpdateView):
@@ -96,13 +96,13 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'blog/create.html'
 
     def dispatch(self, request, *args, **kwargs):
-        post = get_object_or_404(Post, pk=kwargs['pk'])
-        if post.author != request.user and post.is_published:
+        post = get_object_or_404(Post, pk=self.kwargs['pk'])
+        if post.author != self.request.user:
             return redirect('blog:post_detail', pk=self.kwargs['pk'])
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse('blog:profile', args=[self.request.user])
+        return reverse('blog:profile', kwargs={'username': self.request.user})
 
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
@@ -121,7 +121,7 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
         return context
 
     def get_success_url(self):
-        return reverse('blog:profile', args=[self.request.user])
+        return reverse('blog:profile', kwargs={'username': self.request.user})
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
@@ -183,8 +183,7 @@ class ProfileListView(ListView):
                 'category',
                 'location').filter(
                     author__username=self.kwargs
-                    ['username'],
-                    is_published=True)).annotate(
+                    ['username'])).annotate(
                         comment_count=Count('comments')).order_by('-pub_date')
 
     def get_context_data(self, **kwargs):
@@ -192,7 +191,7 @@ class ProfileListView(ListView):
         context['profile'] = get_object_or_404(
             User,
             username=self.kwargs['username'])
-        context['post'] = self.get_queryset()
+        # context['post'] = self.get_queryset()
         return context
 
 
@@ -204,4 +203,4 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         return self.request.user
 
     def get_success_url(self):
-        return reverse('blog:profile', args=[self.request.user])
+        return reverse('blog:profile', kwargs={'username': self.request.user})
