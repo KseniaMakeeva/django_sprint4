@@ -6,11 +6,12 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import (
     CreateView, DeleteView, DetailView,
     ListView, UpdateView, View)
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 
 from blog.models import Category, Comment, Post, User
 
-from .forms import PostForm, CommentForm, UserForm
+from .forms import (
+    CommentForm, PostForm, RegistrationForm, UserForm)
 
 POSTS_ON_PAGE = 10
 
@@ -177,21 +178,24 @@ class ProfileListView(ListView):
     template_name = 'blog/profile.html'
 
     def get_queryset(self):
-        return (
-            self.model.objects.select_related(
-                'author',
-                'category',
-                'location').filter(
-                    author__username=self.kwargs
-                    ['username'])).annotate(
-                        comment_count=Count('comments')).order_by('-pub_date')
+        self.profile = get_object_or_404(
+            User,
+            username=self.kwargs['username'])
+        queryset = super().get_queryset().select_related('author',
+                                                         'location',
+                                                         'category').filter(
+            author__username=self.profile).annotate(
+                comments_count=Count('comments')).order_by(
+                    '-pub_date')
+        if self.request.user != self.profile:
+            queryset = queryset.filter(is_published=True,
+                                       pub_date__lte=datetime.now(),
+                                       category__is_published=True)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['profile'] = get_object_or_404(
-            User,
-            username=self.kwargs['username'])
-        # context['post'] = self.get_queryset()
+        context['profile'] = self.profile
         return context
 
 
@@ -204,3 +208,9 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_success_url(self):
         return reverse('blog:profile', kwargs={'username': self.request.user})
+
+
+class Registration(CreateView):
+    template_name = 'registration/registration_form.html'
+    form_class = RegistrationForm
+    success_url = reverse_lazy('blog:index')

@@ -1,8 +1,13 @@
 from django import forms
-# from django.core.exceptions import ValidationError
-# from django.core.mail import send_mail
+from django.contrib.auth.forms import UserCreationForm
 
 from .models import Comment, Post, User
+
+
+class RegistrationForm(UserCreationForm):
+
+    class Meta(UserCreationForm.Meta):
+        model = User
 
 
 class PostForm(forms.ModelForm):
@@ -10,7 +15,9 @@ class PostForm(forms.ModelForm):
     class Meta:
         model = Post
         exclude = ('author',)
-        widgets = {'post': forms.DateInput(attrs={'type': 'date'})}
+        widgets = {'pub_date': forms.DateInput(
+            attrs={'type': 'datetime-local'},
+            format='%Y-%m-%dT%H:%M',)}
 
 
 class CommentForm(forms.ModelForm):
@@ -28,5 +35,5 @@ class UserForm(forms.ModelForm):
             'username',
             'first_name',
             'last_name',
-            'email'
-        }
+            'email', }
+        exclude = ('password',)
