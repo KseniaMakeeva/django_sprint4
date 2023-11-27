@@ -53,7 +53,7 @@ class PostDetailView(DetailView):
         if (
             not self.get_object().is_published and (
                 self.get_object().author != request.user)):
-            return redirect('blog:list', pk=self.kwargs['pk'])
+            return redirect('blog:post_detail', pk=self.kwargs['pk'])
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
