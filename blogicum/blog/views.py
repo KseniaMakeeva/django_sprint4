@@ -1,7 +1,10 @@
 from datetime import datetime
+
 from django.db.models import Count
+from django.core.exceptions import PermissionDenied
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import (
     CreateView, DeleteView, DetailView,
@@ -9,7 +12,6 @@ from django.views.generic import (
 from django.urls import reverse, reverse_lazy
 
 from blog.models import Category, Comment, Post, User
-
 from .forms import (
     CommentForm, PostForm, RegistrationForm, UserForm)
 
@@ -51,10 +53,9 @@ class PostDetailView(DetailView):
     template_name = 'blog/detail.html'
 
     def dispatch(self, request, *args, **kwargs):
-        if (
-            not self.get_object().is_published and (
-                self.get_object().author != request.user)):
-            return redirect('blog:post_detail', pk=self.kwargs['pk'])
+        if request.user != self.get_object().author and \
+                not self.get_object().is_published:
+            raise Http404
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -113,7 +114,7 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
     def dispatch(self, request, *args, **kwargs):
         instance = get_object_or_404(Post, pk=kwargs['pk'])
         if instance.author != request.user:
-            return redirect('blog:post_detail', pk=self.kwargs['pk'])
+            raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -144,7 +145,7 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs=self.kwargs)
+        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['pk']})
 
 
 class CommentMixin(LoginRequiredMixin, View):
@@ -156,7 +157,7 @@ class CommentMixin(LoginRequiredMixin, View):
         comment = get_object_or_404(Comment,
                                     pk=self.kwargs['comment_id'])
         if comment.author != request.user:
-            return redirect('blog:post_detail', id=kwargs['post_id'])
+            raise Http404
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
@@ -178,24 +179,25 @@ class ProfileListView(ListView):
     template_name = 'blog/profile.html'
 
     def get_queryset(self):
-        self.profile = get_object_or_404(
+        self.author = get_object_or_404(
             User,
             username=self.kwargs['username'])
         queryset = super().get_queryset().select_related('author',
                                                          'location',
                                                          'category').filter(
-            author__username=self.profile).annotate(
-                comments_count=Count('comments')).order_by(
+            author__username=self.author).annotate(
+                comment_count=Count('comments')).order_by(
                     '-pub_date')
-        if self.request.user != self.profile:
+        if self.request.user != self.author:
             queryset = queryset.filter(is_published=True,
                                        pub_date__lte=datetime.now(),
-                                       category__is_published=True)
+                                       category__is_published=True).annotate(
+                comment_count=Count('comments'))
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['profile'] = self.profile
+        context['profile'] = self.author
         return context
 
 

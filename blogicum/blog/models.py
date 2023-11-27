@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from django.db import models
 from django.contrib.auth import get_user_model
 
@@ -50,8 +48,7 @@ class Post(BaseModel):
     title = models.CharField(max_length=256, verbose_name='Заголовок')
     text = models.TextField(verbose_name='Текст')
     image = models.ImageField('Фото', upload_to='blog_images', blank=True)
-    pub_date = models.DateTimeField(default=datetime.now,
-                                    verbose_name='Дата и время публикации',
+    pub_date = models.DateTimeField(verbose_name='Дата и время публикации',
                                     help_text='Если установить дату и время '
                                     'в будущем — можно делать '
                                     'отложенные публикации.')
@@ -93,7 +90,6 @@ class Comment(BaseModel):
         verbose_name='Автор комментария')
 
     class Meta:
-        ordering = ('-created_at',)
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
 
