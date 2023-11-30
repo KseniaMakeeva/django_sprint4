@@ -119,7 +119,7 @@ class ProfileListView(ListView):
 
     def get_queryset(self):
         profile = self.get_object()
-        posts = posts = annotate_comments(profile.posts)
+        posts = annotate_comments(profile.posts)
         if self.request.user != profile:
             posts = filtered_posts(posts)
         return posts
@@ -138,7 +138,8 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         return self.request.user
 
     def get_success_url(self):
-        return reverse('blog:profile', kwargs={'username': self.request.user})
+        return reverse('blog:profile',
+                       kwargs={'username': self.request.user.username})
 
 
 class Registration(CreateView):

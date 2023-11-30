@@ -34,11 +34,12 @@ class PostMixin(LoginRequiredMixin, UserIsAuthorMixin):
         return redirect('blog:post_detail', pk=self.kwargs['pk'])
 
     def get_success_url(self):
-        return reverse('blog:profile', kwargs={'username': self.request.user})
+        return reverse('blog:profile',
+                       kwargs={'username': self.request.user.username})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["form"] = PostForm(instance=self.object)
+        context['form'] = PostForm(instance=self.object)
         return context
 
 
